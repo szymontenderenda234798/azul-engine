@@ -5,10 +5,13 @@ from model.starting_player_tile import StartingPlayerTile
 from model.box_lid import BoxLid
 from model.random_player import RandomPlayer
 from model.state import State
+from visualizer import Visualizer
 
 class GameEngine:
-    def __init__(self, print_enabled=False):
+    def __init__(self, print_enabled=False, visualize=False):
         self.print_enabled = print_enabled
+        self.visualize = visualize
+        self.visualizer = Visualizer()
 
     def setup_game(self, player1, player2):
         state = State(player1=player1, player2=player2)
@@ -38,6 +41,8 @@ class GameEngine:
 
     
     def play_turn(self, state):
+        if self.visualize:
+            self.visualizer.draw_game_state(state)
         self.count_tiles_in_game(state)
         if self.print_enabled:
             print(f"\n-------------------------------------\n{state.current_player.name}'s turn\n-------------------------------------")

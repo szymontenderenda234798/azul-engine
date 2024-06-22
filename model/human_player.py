@@ -1,9 +1,10 @@
 from model.player import Player
 from model.starting_player_tile import StartingPlayerTile
 from enums.tile_color import TileColor
+from visualizer import Visualizer
 
 class HumanPlayer(Player):
-
+    
     def make_decision(self, state):
         factory_index = self.select_factory(state)
         selected_factory = state.central_factory if factory_index == -1 else state.factories[factory_index]
