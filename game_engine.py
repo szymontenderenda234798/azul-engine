@@ -3,6 +3,7 @@ from model.state import State
 from visualizer import Visualizer
 from enums.tile_color import TileColor
 import numpy as np
+from model.random_player import RandomPlayer
 
 class GameEngine:
     def __init__(self, print_enabled=False, visualize=False):
@@ -92,7 +93,7 @@ class GameEngine:
                 return state
         
     def play_turn_randomly(self, state):
-        factory_index, selected_color, pattern_line_index = state.current_player.make_random_decision(state)
+        factory_index, selected_color, pattern_line_index = self.make_random_decision(state)
 
         selected_factory = state.central_factory if factory_index == -1 else state.factories[factory_index]
         
@@ -117,6 +118,11 @@ class GameEngine:
         state = self.move_current_player(state)
         self.count_tiles_in_game(state)
         return state
+    
+    def make_random_decision(self, state):
+        random_player = RandomPlayer("random placeholder decision maker")
+        factory_index, selected_color, pattern_line_index = random_player.make_decision(state)
+        return factory_index, selected_color, pattern_line_index
     
     def get_next_state(self, state, action):
         factory_index, selected_color, pattern_line_index = action
@@ -143,7 +149,6 @@ class GameEngine:
 
         state = self.move_current_player(state)
         self.count_tiles_in_game(state)
-        state.last_move = action
         return state
     
     def end_round(self, state):
@@ -297,15 +302,18 @@ class GameEngine:
         # print(f"Action: Take {list(TileColor)[color_index].name} tiles from factory {factory_index + 1 if factory_index != self.factory_count else 'central'} and place them in pattern line {pattern_line_index + 1}")
         return factory_index * self.color_count * self.pattern_lines + color_index * self.pattern_lines + pattern_line_index
     
+    def action_to_index(self, factory_index, color_index, pattern_line_index):
+        if factory_index == -1:  # Central factory
+            factory_index = self.factory_count  # Use the last index for central factory
+        # print(f"Action: Take {list(TileColor)[color_index].name} tiles from factory {factory_index + 1 if factory_index != self.factory_count else 'central'} and place them in pattern line {pattern_line_index + 1}")
+        return factory_index * self.color_count * self.pattern_lines + color_index * self.pattern_lines + pattern_line_index
+    
     def index_to_action(self, index):
         factory_index = index // (self.color_count * self.pattern_lines)
         color_index = (index // self.pattern_lines) % self.color_count
         pattern_line_index = index % self.pattern_lines
         if factory_index == self.factory_count:  # Central factory
             factory_index = -1
+        # print("INDEX TO ACTION METHOD")
         # print("The player took tiles of color", list(TileColor)[color_index].name, "from factory", factory_index + 1 if factory_index != -1 else 'central', "and placed them in pattern line", pattern_line_index + 1)
-        return factory_index, list(TileColor)[color_index], pattern_line_index
-    
-    def transform_action_color(self, action):
-        factory_index, color_index, pattern_line_index = action
         return factory_index, list(TileColor)[color_index], pattern_line_index

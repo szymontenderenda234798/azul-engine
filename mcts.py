@@ -21,7 +21,7 @@ class MCTS:
             result = self._simulate(node)
             self._backpropagate(node, result)
 
-        return root.best_child(c_param=0).state.last_move
+        return root.best_child(c_param=0).action_taken
 
     def _select(self, node):
         while node.is_fully_expanded() and not self.game_engine.is_state_terminal(node.state):
@@ -30,16 +30,16 @@ class MCTS:
 
     def _expand(self, node):
         actions = np.where(node.actions_to_try == 1)[0]
-        if len(actions) == 0:
-            raise ValueError("No 1s found in the array")
         random_action_index = random.choice(actions)
         action = self.game_engine.index_to_action(random_action_index)
         next_state = self.game_engine.get_next_state(deepcopy(node.state), action)
-        return node.add_child(next_state, random_action_index)
+        node.actions_to_try[random_action_index] = 0
+        return node.add_child(next_state, action)
     
     def _simulate(self, node):
         current_state = deepcopy(node.state)
         state = self.game_engine.finish_game_randomly(current_state)
+        print("simulation over")
         return self.game_engine.get_result(state)
 
     def _backpropagate(self, node, result):

@@ -11,21 +11,11 @@ class RandomPlayer(Player):
 
         return factory_index, selected_color, pattern_line_index
     
-    def make_random_decision(self, state):
-        factory_index = self.select_factory(state)
-        selected_factory = state.central_factory if factory_index == -1 else state.factories[factory_index]
-        selected_color = self.select_color(selected_factory)
-        pattern_line_index = self.select_pattern_line()
-
-        return factory_index, selected_color, pattern_line_index
-
     def select_factory(self, state):
         # Filter out empty factories and the central factory if it only has the starting player tile
         valid_factories = [i for i, factory in enumerate(state.factories, start=1) if factory.tiles]
         if any(not isinstance(tile, StartingPlayerTile) for tile in state.central_factory.tiles):
             valid_factories.append(0)  # Adding '0' to represent the central factory
-        print("Valid factories:")
-        print(valid_factories)
         if not valid_factories:
             print("No valid factories to select from.")
             return None

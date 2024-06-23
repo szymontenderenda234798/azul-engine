@@ -20,4 +20,3 @@ class State:
         self.players = [player1, player2]
         self.game_over = False
         self.winner = None
-        self.last_move = None
