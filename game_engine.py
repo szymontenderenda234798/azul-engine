@@ -1,17 +1,19 @@
-from model.factory import Factory
-from model.tile_bag import TileBag
-from model.central_factory import CentralFactory
 from model.starting_player_tile import StartingPlayerTile
-from model.box_lid import BoxLid
-from model.random_player import RandomPlayer
 from model.state import State
 from visualizer import Visualizer
+from enums.tile_color import TileColor
+import numpy as np
 
 class GameEngine:
     def __init__(self, print_enabled=False, visualize=False):
         self.print_enabled = print_enabled
         self.visualize = visualize
         self.visualizer = Visualizer()
+
+        self.factory_count = 6
+        self.color_count = 5
+        self.pattern_lines = 6
+        self.action_space_size = self.factory_count * self.color_count * self.pattern_lines
 
     def setup_game(self, player1, player2):
         state = State(player1=player1, player2=player2)
@@ -41,6 +43,7 @@ class GameEngine:
 
     
     def play_turn(self, state):
+        self.get_valid_moves(state)
         if self.visualize:
             self.visualizer.draw_game_state(state)
         self.count_tiles_in_game(state)
@@ -174,3 +177,34 @@ class GameEngine:
             raise ValueError("Total tile count is not 100.")
 
         return tile_count_sum
+    
+    def get_valid_moves(self, state):
+        valid_moves = [False] * self.action_space_size  # 5 factories * 5 colors * 5 pattern lines + 5 factories * 5 colors + 1 central factory * 5 colors
+
+        # Check factories and central factory
+        for factory_index, factory in enumerate(state.factories + [state.central_factory]):
+            for color_index, color in enumerate(TileColor):
+                if any(tile.color == color for tile in factory.tiles):
+                # Check if the color can be placed in any of the pattern lines
+                    not_fully_occupied_lines_indeces = state.player1.board.get_not_fully_occupied_pattern_lines()
+                    for pattern_line_index in not_fully_occupied_lines_indeces:
+                        pattern_line = state.player1.board.pattern_lines[pattern_line_index]
+                        if all(tile is None or tile.color == color for tile in pattern_line):
+                            action_index = self.action_to_index(factory_index, color_index, pattern_line_index)
+                            valid_moves[action_index] = True
+                    action_index = self.action_to_index(factory_index, color_index, 5)
+                    valid_moves[action_index] = True
+
+        assert len(valid_moves) == self.action_space_size
+        return np.array([int(valid) for valid in valid_moves])
+    
+    def action_to_index(self, factory_index, color_index, pattern_line_index):
+        print(f"Action: Take {list(TileColor)[color_index].name} tiles from factory {factory_index + 1} and place them in pattern line {pattern_line_index + 1}")
+        return factory_index * self.color_count * self.pattern_lines + color_index * self.pattern_lines + pattern_line_index
+    
+    def index_to_action(self, index):
+        factory_index = index // (self.color_count * self.pattern_lines)
+        color_index = (index // self.pattern_lines) % self.color_count
+        pattern_line_index = index % self.pattern_lines
+        # print("The player took tiles of color", list(TileColor)[color_index], "from factory", factory_index + 1, "and placed them in pattern line", pattern_line_index + 1)
+        return factory_index, list(TileColor)[color_index], pattern_line_index
