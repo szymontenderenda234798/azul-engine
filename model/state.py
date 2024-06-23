@@ -3,6 +3,7 @@ from model.tile_bag import TileBag
 from model.central_factory import CentralFactory
 from model.player_board import PlayerBoard
 from model.factory import Factory
+from enums.tile_color import TileColor
 
 class State:
     def __init__(self, player1, player2):
@@ -18,3 +19,5 @@ class State:
         self.round_number = 1
         self.players = [player1, player2]
         self.game_over = False
+        self.winner = None
+        self.last_move = None

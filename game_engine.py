@@ -10,10 +10,10 @@ class GameEngine:
         self.visualize = visualize
         self.visualizer = Visualizer()
 
-        self.factory_count = 6
+        self.factory_count = 5
         self.color_count = 5
         self.pattern_lines = 6
-        self.action_space_size = self.factory_count * self.color_count * self.pattern_lines
+        self.action_space_size = (self.factory_count + 1) * self.color_count * self.pattern_lines
 
     def setup_game(self, player1, player2):
         state = State(player1=player1, player2=player2)
@@ -24,26 +24,27 @@ class GameEngine:
     def play_game(self, player1, player2):
         if self.print_enabled:
             print("Starting the game...")
-
-        state = self.setup_game(player1=player1, player2=player2)
-
+            state = self.setup_game(player1=player1, player2=player2)
         while not state.game_over:
             if self.print_enabled:
                 print(f"\n-------------------------------------\nRound {state.round_number}\n-------------------------------------")
             state = self.play_round(state)
         self.print_final_scores(state)
+        return state
 
     def play_round(self, state):
         while True:
             state = self.play_turn(state)
             # Check for end of round condition
-            if all(not factory.tiles for factory in state.factories) and not state.central_factory.tiles:
+            if self.check_if_round_is_over(state):
                 state = self.end_round(state)
                 return state  # End the round
+            
+    def check_if_round_is_over(self, state):
+        return all(not factory.tiles for factory in state.factories) and not state.central_factory.tiles
 
     
     def play_turn(self, state):
-        self.get_valid_moves(state)
         if self.visualize:
             self.visualizer.draw_game_state(state)
         self.count_tiles_in_game(state)
@@ -76,6 +77,75 @@ class GameEngine:
         self.count_tiles_in_game(state)
         return state
     
+    def finish_game_randomly(self, state):
+        while not state.game_over:
+            state = self.play_round_randomly(state)
+        self.print_final_scores(state)
+        return state
+    
+    def play_round_randomly(self, state):
+        while True:
+            state = self.play_turn_randomly(state)
+            # Check for end of round condition
+            if self.check_if_round_is_over(state):
+                state = self.end_round(state)
+                return state
+        
+    def play_turn_randomly(self, state):
+        factory_index, selected_color, pattern_line_index = state.current_player.make_random_decision(state)
+
+        selected_factory = state.central_factory if factory_index == -1 else state.factories[factory_index]
+        
+        if any(isinstance(tile, StartingPlayerTile) for tile in selected_factory.tiles):
+            if self.print_enabled:
+                print("Starting player marker taken!")
+            selected_factory.starting_player_marker_taken = True
+            for tile in selected_factory.tiles:
+                if isinstance(tile, StartingPlayerTile):
+                    selected_factory.tiles.remove(tile)
+                    break
+            state.current_player.board.place_starting_player_tile_on_floor_line()
+
+        # Applying the decisions
+        selected_tiles = selected_factory.remove_and_return_tiles_of_color(selected_color)
+        remaining_tiles = selected_factory.get_and_clear_remaining_tiles()
+        state.central_factory.add_tiles(remaining_tiles)
+        state.current_player.place_tile_in_pattern_line(selected_color, pattern_line_index, len(selected_tiles))
+        if self.print_enabled:
+            print(f"{state.current_player.name} placed {len(selected_tiles)} {selected_color.name} tiles in pattern line {pattern_line_index + 1}.")
+
+        state = self.move_current_player(state)
+        self.count_tiles_in_game(state)
+        return state
+    
+    def get_next_state(self, state, action):
+        factory_index, selected_color, pattern_line_index = action
+
+        selected_factory = state.central_factory if factory_index == -1 else state.factories[factory_index]
+
+        if any(isinstance(tile, StartingPlayerTile) for tile in selected_factory.tiles):
+            if self.print_enabled:
+                print("Starting player marker taken!")
+            selected_factory.starting_player_marker_taken = True
+            for tile in selected_factory.tiles:
+                if isinstance(tile, StartingPlayerTile):
+                    selected_factory.tiles.remove(tile)
+                    break
+            state.current_player.board.place_starting_player_tile_on_floor_line()
+
+        # Applying the decisions
+        selected_tiles = selected_factory.remove_and_return_tiles_of_color(selected_color)
+        remaining_tiles = selected_factory.get_and_clear_remaining_tiles()
+        state.central_factory.add_tiles(remaining_tiles)
+        state.current_player.place_tile_in_pattern_line(selected_color, pattern_line_index, len(selected_tiles))
+        if self.print_enabled:
+            print(f"{state.current_player.name} placed {len(selected_tiles)} {selected_color.name} tiles in pattern line {pattern_line_index + 1}.")
+
+        state = self.move_current_player(state)
+        self.count_tiles_in_game(state)
+        state.last_move = action
+        return state
+    
     def end_round(self, state):
         """Handle the end of a round: Move tiles, score points, and check game over condition."""
         if self.print_enabled:
@@ -100,10 +170,33 @@ class GameEngine:
         state = self.check_game_over(state)
         state = self.set_new_starting_player(state)
         state = self.refresh_factories(state)
+        state = self.game_over_score_and_setting_winner(state)
+        return state
+    
+    def game_over_score_and_setting_winner(self, state):
         if state.game_over:
+            highest_score = -float('inf')
+            winner = None
             for player in state.players:
                 player.score += player.score_end_game_points()  # Assuming this method returns the end game points
+                if self.print_enabled:
+                    print(f"\n{player.name} scored {player.score} points.")
+                if player.score > highest_score:
+                    highest_score = player.score
+                    winner = player
+            state.winner = winner
+            if self.print_enabled:
+                print(f"\nThe winner is {winner.name} with a score of {highest_score}!")
         return state
+
+            
+    def is_state_terminal(self, state):
+        return state.game_over
+    
+    def get_result(self, state):
+        if state.winner is not None:
+            return 1 if state.winner == state.current_player else -1
+        pass
 
     def check_game_over(self, state):
         for player in state.players:
@@ -186,9 +279,9 @@ class GameEngine:
             for color_index, color in enumerate(TileColor):
                 if any(tile.color == color for tile in factory.tiles):
                 # Check if the color can be placed in any of the pattern lines
-                    not_fully_occupied_lines_indeces = state.player1.board.get_not_fully_occupied_pattern_lines()
+                    not_fully_occupied_lines_indeces = state.current_player.board.get_not_fully_occupied_pattern_lines()
                     for pattern_line_index in not_fully_occupied_lines_indeces:
-                        pattern_line = state.player1.board.pattern_lines[pattern_line_index]
+                        pattern_line = state.current_player.board.pattern_lines[pattern_line_index]
                         if all(tile is None or tile.color == color for tile in pattern_line):
                             action_index = self.action_to_index(factory_index, color_index, pattern_line_index)
                             valid_moves[action_index] = True
@@ -199,12 +292,20 @@ class GameEngine:
         return np.array([int(valid) for valid in valid_moves])
     
     def action_to_index(self, factory_index, color_index, pattern_line_index):
-        print(f"Action: Take {list(TileColor)[color_index].name} tiles from factory {factory_index + 1} and place them in pattern line {pattern_line_index + 1}")
+        if factory_index == -1:  # Central factory
+            factory_index = self.factory_count  # Use the last index for central factory
+        # print(f"Action: Take {list(TileColor)[color_index].name} tiles from factory {factory_index + 1 if factory_index != self.factory_count else 'central'} and place them in pattern line {pattern_line_index + 1}")
         return factory_index * self.color_count * self.pattern_lines + color_index * self.pattern_lines + pattern_line_index
     
     def index_to_action(self, index):
         factory_index = index // (self.color_count * self.pattern_lines)
         color_index = (index // self.pattern_lines) % self.color_count
         pattern_line_index = index % self.pattern_lines
-        # print("The player took tiles of color", list(TileColor)[color_index], "from factory", factory_index + 1, "and placed them in pattern line", pattern_line_index + 1)
+        if factory_index == self.factory_count:  # Central factory
+            factory_index = -1
+        # print("The player took tiles of color", list(TileColor)[color_index].name, "from factory", factory_index + 1 if factory_index != -1 else 'central', "and placed them in pattern line", pattern_line_index + 1)
+        return factory_index, list(TileColor)[color_index], pattern_line_index
+    
+    def transform_action_color(self, action):
+        factory_index, color_index, pattern_line_index = action
         return factory_index, list(TileColor)[color_index], pattern_line_index
