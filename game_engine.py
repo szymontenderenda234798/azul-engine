@@ -39,7 +39,7 @@ class GameEngine:
             # Check for end of round condition
             if self.check_if_round_is_over(state):
                 state = self.end_round(state)
-                return state  # End the round
+            return state  # End the round
             
     def check_if_round_is_over(self, state):
         return all(not factory.tiles for factory in state.factories) and not state.central_factory.tiles
@@ -76,22 +76,10 @@ class GameEngine:
 
         state = self.move_current_player(state)
         self.count_tiles_in_game(state)
+        if self.check_if_round_is_over(state):
+            state = self.end_round(state)
         return state
     
-    def finish_game_randomly(self, state):
-        while not state.game_over:
-            state = self.play_round_randomly(state)
-        self.print_final_scores(state)
-        return state
-    
-    def play_round_randomly(self, state):
-        while True:
-            state = self.play_turn_randomly(state)
-            # Check for end of round condition
-            if self.check_if_round_is_over(state):
-                state = self.end_round(state)
-                return state
-        
     def play_turn_randomly(self, state):
         factory_index, selected_color, pattern_line_index = self.make_random_decision(state)
 
@@ -117,6 +105,12 @@ class GameEngine:
 
         state = self.move_current_player(state)
         self.count_tiles_in_game(state)
+        return state
+    
+    def simulate_round_randomly_to_the_end(self, state):
+        while not self.check_if_round_is_over(state):
+            state = self.play_turn_randomly(state)
+        state = self.end_round(state)
         return state
     
     def make_random_decision(self, state):
@@ -193,15 +187,12 @@ class GameEngine:
             if self.print_enabled:
                 print(f"\nThe winner is {winner.name} with a score of {highest_score}!")
         return state
-
             
-    def is_state_terminal(self, state):
-        return state.game_over
+    def is_state_terminated(self, state):
+        return True if sum(self.get_valid_moves(state)) == 0 else False
     
     def get_result(self, state):
-        if state.winner is not None:
-            return 1 if state.winner == state.current_player else -1
-        pass
+        return 1 if state.player1.score > state.player2.score else -1
 
     def check_game_over(self, state):
         for player in state.players:
@@ -295,12 +286,6 @@ class GameEngine:
 
         assert len(valid_moves) == self.action_space_size
         return np.array([int(valid) for valid in valid_moves])
-    
-    def action_to_index(self, factory_index, color_index, pattern_line_index):
-        if factory_index == -1:  # Central factory
-            factory_index = self.factory_count  # Use the last index for central factory
-        # print(f"Action: Take {list(TileColor)[color_index].name} tiles from factory {factory_index + 1 if factory_index != self.factory_count else 'central'} and place them in pattern line {pattern_line_index + 1}")
-        return factory_index * self.color_count * self.pattern_lines + color_index * self.pattern_lines + pattern_line_index
     
     def action_to_index(self, factory_index, color_index, pattern_line_index):
         if factory_index == -1:  # Central factory

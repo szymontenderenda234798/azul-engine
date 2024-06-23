@@ -11,20 +11,29 @@ class MCTS:
         self.game_engine = GameEngine(print_enabled=False, visualize=False)
         self.n_iter = n_iter
 
+    def print_progress(self, iteration, total):
+        percent = (iteration + 1) / total
+        bar_length = 40  # Modify this to change the progress bar length
+        bar = '#' * int(bar_length * percent) + '-' * (bar_length - int(bar_length * percent))
+        print(f"\rProgress: [{bar}] {percent * 100:.2f}%", end='\r')
+        if iteration == total - 1:
+            print()
+
     def search(self, initial_state):
         root = Node(initial_state, self.game_engine)
 
         for _ in range(self.n_iter):
+            self.print_progress(_, self.n_iter)
             node = self._select(root)
-            if not self.game_engine.is_state_terminal(node.state):
+            if not self.game_engine.is_state_terminated(node.state):
                 node = self._expand(node)
             result = self._simulate(node)
             self._backpropagate(node, result)
 
-        return root.best_child(c_param=0).action_taken
+        return root.best_child().action_taken
 
     def _select(self, node):
-        while node.is_fully_expanded() and not self.game_engine.is_state_terminal(node.state):
+        while node.is_fully_expanded() and not self.game_engine.is_state_terminated(node.state):
             node = node.best_child()
         return node
 
@@ -38,8 +47,7 @@ class MCTS:
     
     def _simulate(self, node):
         current_state = deepcopy(node.state)
-        state = self.game_engine.finish_game_randomly(current_state)
-        print("simulation over")
+        state = self.game_engine.simulate_round_randomly_to_the_end(current_state)
         return self.game_engine.get_result(state)
 
     def _backpropagate(self, node, result):

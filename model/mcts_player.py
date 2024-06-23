@@ -4,7 +4,7 @@ import random
 from model.starting_player_tile import StartingPlayerTile
 
 class MCTSPlayer(Player):
-    def __init__(self, name, n_iter=10):
+    def __init__(self, name, n_iter=10000):
         super().__init__(name)
         self.mcts = MCTS(n_iter)
 
