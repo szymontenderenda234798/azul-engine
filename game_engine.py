@@ -25,7 +25,7 @@ class GameEngine:
     def play_game(self, player1, player2):
         if self.print_enabled:
             print("Starting the game...")
-            state = self.setup_game(player1=player1, player2=player2)
+        state = self.setup_game(player1=player1, player2=player2)
         while not state.game_over:
             if self.print_enabled:
                 print(f"\n-------------------------------------\nRound {state.round_number}\n-------------------------------------")
@@ -156,16 +156,13 @@ class GameEngine:
         if self.print_enabled:
             print(f"\n-------------------------------------\nSCORING AND MOVING TO WALL\n-------------------------------------")
         for player in state.players:
-            self.count_tiles_in_game(state)
             score = player.move_tiles_to_wall_and_score()  # Assuming this method returns the score for the round
-            self.count_tiles_in_game(state)
             player.score += score  # Assuming each player has a 'score' attribute
             if self.print_enabled:
                 print(f"\n{player.name} scored {score} points this round.")
                 print(f"{player.name} board after moving:")
                 player.board.print_board()
         state.round_number += 1
-        self.count_tiles_in_game(state)
         state = self.check_game_over(state)
         state = self.set_new_starting_player(state)
         state = self.refresh_factories(state)
@@ -184,15 +181,14 @@ class GameEngine:
                     highest_score = player.score
                     winner = player
             state.winner = winner
-            if self.print_enabled:
-                print(f"\nThe winner is {winner.name} with a score of {highest_score}!")
+            # if self.print_enabled:
         return state
             
     def is_state_terminated(self, state):
         return True if sum(self.get_valid_moves(state)) == 0 else False
     
     def get_result(self, state):
-        return 1 if state.player1.score > state.player2.score else -1
+        return 1 if state.player1.score > state.player2.score else 0
 
     def check_game_over(self, state):
         for player in state.players:
@@ -302,3 +298,9 @@ class GameEngine:
         # print("INDEX TO ACTION METHOD")
         # print("The player took tiles of color", list(TileColor)[color_index].name, "from factory", factory_index + 1 if factory_index != -1 else 'central', "and placed them in pattern line", pattern_line_index + 1)
         return factory_index, list(TileColor)[color_index], pattern_line_index
+    
+    def get_winner(self, state):
+        return state.winner
+    
+    def get_scores(self, state):
+        return state.player1.score, state.player2.score

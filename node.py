@@ -3,7 +3,7 @@ import numpy as np
 from game_engine import GameEngine
 
 class Node:
-    def __init__(self, state, game_engine, parent=None, action_taken=None):
+    def __init__(self, state, game_engine, parent=None, action_taken=None, c_param=1.4):
         self.state = state
         self.game_engine = game_engine
         self.parent = parent
@@ -12,13 +12,14 @@ class Node:
         self.wins = 0
         self.actions_to_try = self.game_engine.get_valid_moves(self.state)
         self.action_taken = action_taken
+        self.c_param = c_param
 
     def is_fully_expanded(self):
         return np.sum(self.actions_to_try) == 0 and len(self.children) > 0
 
-    def best_child(self, c_param=1.4):
+    def best_child(self):
         choices_weights = [
-            (child.wins / child.visits) + c_param * math.sqrt((2 * math.log(self.visits) / child.visits))
+            (child.wins / child.visits) + self.c_param * math.sqrt((2 * math.log(self.visits) / child.visits))
             for child in self.children
         ]
         return self.children[np.argmax(choices_weights)]

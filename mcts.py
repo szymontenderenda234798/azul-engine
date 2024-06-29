@@ -7,11 +7,13 @@ import numpy as np
 
 
 class MCTS:
-    def __init__(self, n_iter):
+    def __init__(self, n_iter, c_param):
         self.game_engine = GameEngine(print_enabled=False, visualize=False)
         self.n_iter = n_iter
+        self.c_param = c_param
 
     def print_progress(self, iteration, total):
+        pass
         percent = (iteration + 1) / total
         bar_length = 40  # Modify this to change the progress bar length
         bar = '#' * int(bar_length * percent) + '-' * (bar_length - int(bar_length * percent))
@@ -20,7 +22,7 @@ class MCTS:
             print()
 
     def search(self, initial_state):
-        root = Node(initial_state, self.game_engine)
+        root = Node(initial_state, self.game_engine, c_param = self.c_param)
 
         for _ in range(self.n_iter):
             self.print_progress(_, self.n_iter)
@@ -30,6 +32,7 @@ class MCTS:
             result = self._simulate(node)
             self._backpropagate(node, result)
 
+        # self.print_tree(root)
         return root.best_child().action_taken
 
     def _select(self, node):
@@ -55,3 +58,9 @@ class MCTS:
             node.visits += 1
             node.wins += result
             node = node.parent
+
+    def print_tree(self, node, level=0):
+        indent = "  " * level
+        print(f"{indent}Node: {node.action_taken}, Wins: {node.wins}, Visits: {node.visits}")
+        for child in node.children:
+            self.print_tree(child, level + 1)
