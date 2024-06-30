@@ -283,3 +283,13 @@ class PlayerBoard:
         
         completed_color_sets_score = sum(10 for count in color_counts.values() if count == 5)
         return completed_color_sets_score
+    
+    def get_not_fully_occupied_pattern_lines(self):
+        """
+        Returns the indexes of pattern lines that are not fully occupied.
+        """
+        not_fully_occupied_indexes = []
+        for index, line in enumerate(self.pattern_lines):
+            if None in line[:index + 1]:
+                not_fully_occupied_indexes.append(index)
+        return not_fully_occupied_indexes
